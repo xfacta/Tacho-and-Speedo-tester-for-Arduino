@@ -3,8 +3,8 @@
 - for testing a tacho or speedo for automotive use
 - Two independant outputs -> one for each of speed and RPM
 - Using microseconds for timing
-- because milliseconds did not have enough resolution
-- and hardware timers wouldnt output two independant frequencies
+  - because milliseconds did not have enough resolution
+  - and hardware timers wouldnt output two independant frequencies
  
  
  ## Uses Arduino Pro Mini and SH1106 OLED display

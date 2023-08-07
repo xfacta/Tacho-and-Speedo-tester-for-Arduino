@@ -65,7 +65,7 @@ const int Cylinders = 4;
 
 // Set to true for serial output for debugging
 // normally leave this false, for no serial output
-bool testing = false;
+bool Debug_Mode = false;
 
 // microseconds to output and display each RPM and Speed
 // value for this period of time
@@ -113,11 +113,11 @@ void setup() {
   pinMode(RPM_Pin, OUTPUT);
   digitalWrite(RPM_Pin, HIGH);
 
-  if (testing == true)
+  if (Debug_Mode)
   {
     Serial.begin(115200);
     Serial.println("\nSpeedo and Tacho Tester");
-    // double the Wait_Time of steps for testing and readability
+    // double the Wait_Time of steps for Debug_Mode and readability
     Wait_Time = Wait_Time * 2;
   }
 
@@ -189,7 +189,7 @@ void loop() {
     Speed_Hz = pulses_per_km * (float)vspeed / 3600.0  * Kludge_Factor;   //pulses per km per second * speed
     Speed_period = 1000000 / Speed_Hz / 2;
 
-    if (testing == true)
+    if (Debug_Mode)
     {
       Serial.println("Speed");
       Serial.print(vspeed); Serial.println(" km/hr");
@@ -216,7 +216,7 @@ void loop() {
     RPM_Hz = (float)RPM * (float)Cylinders / 120.0 * Kludge_Factor;
     RPM_period = int(1000000.0 / RPM_Hz / 2.0); 
     
-    if (testing == true)
+    if (Debug_Mode)
     {
       Serial.println("RPM");
       Serial.print(RPM); Serial.println(" RPM");

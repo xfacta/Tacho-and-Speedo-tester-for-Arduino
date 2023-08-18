@@ -73,7 +73,7 @@ uint32_t Wait_Time = 5000000;
 
 // Kludge Fatcor to improve timing based on actual frequency measurements
 // to allow for different crystals or somthing similar
-float Kludge_Factor = 0.994;
+float Kludge_Factor = 1.000;
 
 //========================================================================
 
@@ -81,8 +81,8 @@ float Kludge_Factor = 0.994;
 
 // Pin definitions
 // for outputs
-const int RPM_Pin = 9;
-const int Speed_Pin = 10;
+#define RPM_Pin 9
+#define Speed_Pin 10
 
 // RPM variables
 int RPM_loop_counter;

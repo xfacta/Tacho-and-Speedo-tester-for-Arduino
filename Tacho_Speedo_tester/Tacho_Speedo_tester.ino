@@ -41,8 +41,8 @@ U8X8_SH1106_128X64_NONAME_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);
 //========================== Set These Manually ==========================
 
 // ************ Speed related settings ************
-float diff_r = 3.90;                // diff ratio
-float tyre_dia = 576.0;             // tyre diameter in mm
+float diff_r = 3.70;                // diff ratio
+float tyre_dia = 634.0;             // tyre diameter in mm
 float vss_rev = 4.0;                // vss pulses per tailshaft revolution
 
 // If using a sensor directly on a wheel
@@ -73,7 +73,7 @@ uint32_t Wait_Time = 5000000;
 
 // Kludge Fatcor to improve timing based on actual frequency measurements
 // to allow for different crystals or somthing similar
-float Kludge_Factor = 1.000;
+float Kludge_Factor = 0.9996;
 
 //========================================================================
 

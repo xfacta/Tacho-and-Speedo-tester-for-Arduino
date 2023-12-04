@@ -79,10 +79,11 @@ float Kludge_Factor = 1.000;
 
 // RPM variables
 uint32_t RPM_Hz;
+float    RPM_constant;
 int      RPM = Min_RPM - 100;    // subtracting 100 because 100 gets added in the first loop
 
 // Speed variables
-float    vss, distance_per_VSS_pulse, pulses_per_km;
+float    vss, distance_per_VSS_pulse, pulses_per_km, VSS_constant;
 uint32_t Speed_Hz;
 int      vspeed = 0;    // starting at 0 because 5 gets added in the first loop
 
@@ -119,9 +120,21 @@ void setup()
     // Calculate the distance travelled per VSS pulse
     // based on tyre size, diff ratio and VSS pulses per tailshaft revolution, in millimeters
     // This will be used to calc the frequency and period
+    // Also calculate the VSS contant up front to avoid
+    // doing divides every loop
 
     distance_per_VSS_pulse = tyre_dia * PI / diff_r / vss_rev;    // millimeters
     pulses_per_km          = 1000000.0 / distance_per_VSS_pulse;
+    VSS_constant           = pulses_per_km / 3600.0 * Kludge_Factor;
+
+    // =======================================================
+
+
+    // =======================================================
+    // Calculate this constant up front to avoid
+    // doing divides every loop
+
+    RPM_constant = (float)Cylinders / 120.0 * Kludge_Factor;
 
     // =======================================================
 
@@ -182,10 +195,11 @@ void loop()
         if (vspeed > 200)
             vspeed = 5;
 
-        Speed_Hz = int(pulses_per_km * (float)vspeed / 3600.0 * Kludge_Factor);    //pulses per km per second * speed
+        //Speed_Hz = int(pulses_per_km * (float)vspeed / 3600.0 * Kludge_Factor);    //pulses per km per second * speed
+        Speed_Hz = int((float)vspeed * VSS_constant);
         VSS_out.play(Speed_Hz, Wait_Time);
 
-          if (Debug_Mode)
+        if (Debug_Mode)
             {
             Serial.println("Speed");
             Serial.print(vspeed);
@@ -216,7 +230,8 @@ void loop()
         if (RPM > Max_RPM)
             RPM = Min_RPM;
 
-        RPM_Hz = int((float)RPM * (float)Cylinders / 120.0 * Kludge_Factor);
+        //RPM_Hz = int((float)RPM * (float)Cylinders / 120.0 * Kludge_Factor);
+        RPM_Hz = int((float)RPM * RPM_constant);
         RPM_out.play(RPM_Hz, Wait_Time);
 
         if (Debug_Mode)

@@ -10,7 +10,7 @@
 // Uses a Tone library to enable non-blocking
 // frequencies on two different pins via timers
 //
-//
+// Trying to reduce the number of divides during the main loop - ! untested !
 
 
 //RPM Speed tester

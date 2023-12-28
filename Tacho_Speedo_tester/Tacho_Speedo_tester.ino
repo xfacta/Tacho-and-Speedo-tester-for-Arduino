@@ -7,14 +7,23 @@
 //
 // SH1106 OLED display
 //
-// Uses a Tone library to enable non-blocking
-// frequencies on two different pins via timers
+// Using microseconds for timing
+// because milliseconds did not
+// have enough resolution
 //
+// Using a hardware timer could not
+// output different frequencies on
+// different pins
 //
+// In calculations the period is divided by 2 because
+// we need to complete a full cycle of the
+// output pins to count as the correct
+// frequency, not just one change from low to high
+// or high to low
 
 
 //RPM Speed tester
-#define Version "V1.8"
+#define Version "V1.6"
 
 
 // OLED stuff here
@@ -27,10 +36,6 @@
 #include <Wire.h>
 U8X8_SH1106_128X64_NONAME_HW_I2C u8x8(/* reset=*/U8X8_PIN_NONE);
 
-
-#include <Tone.h>
-Tone RPM_out;
-Tone VSS_out;
 
 
 //========================== Set These Manually ==========================
@@ -49,10 +54,11 @@ float vss_rev  = 4.0;      // vss pulses per tailshaft revolution
 // Set this to the minimum and maximum RPM required
 // and number of Cylinders
 const int Min_RPM   = 500;
-const int Max_RPM   = 8000;
+const int Max_RPM   = 9000;
 const int Cylinders = 4;
 
 //========================================================================
+
 
 
 //========================================================================
@@ -61,15 +67,16 @@ const int Cylinders = 4;
 // normally leave this false, for no serial output
 bool Debug_Mode = false;
 
-// milliseconds to output and display each RPM and Speed
+// microseconds to output and display each RPM and Speed
 // value for this period of time
-uint32_t Wait_Time = 5000;
+uint32_t Wait_Time = 1000000;
 
 // Kludge Fatcor to improve timing based on actual frequency measurements
 // to allow for different crystals or somthing similar
-float Kludge_Factor = 1.000;
+float Kludge_Factor = 0.9996;
 
 //========================================================================
+
 
 
 // Pin definitions
@@ -78,13 +85,15 @@ float Kludge_Factor = 1.000;
 #define Speed_Pin 10
 
 // RPM variables
-uint32_t RPM_Hz;
-float    RPM_constant;
+int      RPM_loop_counter;
+float    RPM_Hz;
+uint32_t RPM_period, RPM_start_time;
 int      RPM = Min_RPM - 100;    // subtracting 100 because 100 gets added in the first loop
 
 // Speed variables
-float    vss, distance_per_VSS_pulse, pulses_per_km, VSS_constant;
-uint32_t Speed_Hz;
+int      Speed_loop_counter;
+float    Speed_Hz, vss, distance_per_VSS_pulse, pulses_per_km;
+uint32_t Speed_period, Speed_start_time;
 int      vspeed = 0;    // starting at 0 because 5 gets added in the first loop
 
 // Used for timing in the main loop
@@ -120,21 +129,9 @@ void setup()
     // Calculate the distance travelled per VSS pulse
     // based on tyre size, diff ratio and VSS pulses per tailshaft revolution, in millimeters
     // This will be used to calc the frequency and period
-    // Also calculate the VSS contant up front to avoid
-    // doing divides every loop
 
     distance_per_VSS_pulse = tyre_dia * PI / diff_r / vss_rev;    // millimeters
     pulses_per_km          = 1000000.0 / distance_per_VSS_pulse;
-    VSS_constant           = pulses_per_km / 3600.0 * Kludge_Factor;
-
-    // =======================================================
-
-
-    // =======================================================
-    // Calculate this constant up front to avoid
-    // doing divides every loop
-
-    RPM_constant = (float)Cylinders / 120.0 * Kludge_Factor;
 
     // =======================================================
 
@@ -162,11 +159,9 @@ void setup()
     // now set a bigger font for printing the digits
     u8x8.setFont(u8x8_font_px437wyse700b_2x2_r);
 
-    RPM_out.begin(RPM_Pin);
-    VSS_out.begin(Speed_Pin);
 
     // set current micros
-    Last_loop_time = millis();
+    Last_loop_time = micros();
 
 
     }    // End void setup
@@ -180,11 +175,16 @@ void setup()
 void loop()
     {
 
-    if (millis() > Last_loop_time + Wait_Time)
+
+    // Every "Wait_Time" set new RPM and Speed values
+    // =======================================================
+    if (micros() > Last_loop_time + Wait_Time)
         {
+        Last_loop_time = micros();
 
         // toggle the LED pin to indicate activity
         digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+
 
         // Calc new Speed value
 
@@ -195,9 +195,8 @@ void loop()
         if (vspeed > 200)
             vspeed = 5;
 
-        //Speed_Hz = int(pulses_per_km * (float)vspeed / 3600.0 * Kludge_Factor);    //pulses per km per second * speed
-        Speed_Hz = int((float)vspeed * VSS_constant);
-        VSS_out.play(Speed_Hz, Wait_Time);
+        Speed_Hz     = pulses_per_km * (float)vspeed / 3600.0 * Kludge_Factor;    //pulses per km per second * speed
+        Speed_period = 1000000 / Speed_Hz / 2;
 
         if (Debug_Mode)
             {
@@ -206,8 +205,8 @@ void loop()
             Serial.println(" km/hr");
             Serial.print(Speed_Hz);
             Serial.println(" Hz");
-            //Serial.print(Speed_period);
-            //Serial.println(" us");
+            Serial.print(Speed_period);
+            Serial.println(" us");
             }
 
 
@@ -230,9 +229,8 @@ void loop()
         if (RPM > Max_RPM)
             RPM = Min_RPM;
 
-        //RPM_Hz = int((float)RPM * (float)Cylinders / 120.0 * Kludge_Factor);
-        RPM_Hz = int((float)RPM * RPM_constant);
-        RPM_out.play(RPM_Hz, Wait_Time);
+        RPM_Hz     = (float)RPM * (float)Cylinders / 120.0 * Kludge_Factor;
+        RPM_period = int(1000000.0 / RPM_Hz / 2.0);
 
         if (Debug_Mode)
             {
@@ -241,8 +239,8 @@ void loop()
             Serial.println(" RPM");
             Serial.print(RPM_Hz);
             Serial.println(" Hz");
-            //Serial.print(RPM_period);
-            //Serial.println(" us");
+            Serial.print(RPM_period);
+            Serial.println(" us");
             Serial.println(" ");
             }
 
@@ -254,8 +252,36 @@ void loop()
         if (RPM < 1000)
             u8x8.print(" ");
 
-        Last_loop_time = millis();
+
+        // Reset the counters and timers
+        // for the next set of outputs
+
+        RPM_loop_counter   = 1;
+        Speed_loop_counter = 1;
+        RPM_start_time     = micros();
+        Speed_start_time   = micros();
         }
+    // End if for the "once every Wait_Time" section
+    // =======================================================
+
+
+    // Toggle the Speed output pin
+
+    if (micros() > Speed_start_time + (Speed_period * Speed_loop_counter))
+        {
+        digitalWrite(Speed_Pin, !digitalRead(Speed_Pin));
+        Speed_loop_counter++;
+        }
+
+
+    // Toggle the RPM output pin
+
+    if (micros() > RPM_start_time + (RPM_period * RPM_loop_counter))
+        {
+        digitalWrite(RPM_Pin, !digitalRead(RPM_Pin));
+        RPM_loop_counter++;
+        }
+
 
     }    // End void loop
 
